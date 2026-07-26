@@ -229,6 +229,36 @@ enum GaussianSplatBufferResourceCreator {
             
             return buffer
         }
+
+        /// RealityKit's color input is spherical-harmonic coefficients, not
+        /// finished RGB. SHARP outputs final linear RGB colors, so convert
+        /// each channel to the standard degree-zero SH coefficient:
+        /// color = 0.5 + SH_C0 * coefficient.
+        func makeDegreeZeroSHBuffer(from colors: NDArray) throws -> LowLevelBuffer {
+            let elementCount = colors.shape.reduce(1, *)
+            let byteSize = elementCount * MemoryLayout<Float>.stride
+            let shC0: Float = 0.28209479177387814
+
+            let buffer = try LowLevelBuffer(
+                descriptor: .init(capacity: byteSize)
+            )
+            let float16View = colors.view(as: Float16.self)
+
+            buffer.withUnsafeMutableBytes { destinationBytes in
+                let destinationValues = destinationBytes.bindMemory(
+                    to: Float.self
+                )
+
+                float16View.withUnsafePointer { sourceValues, _, _ in
+                    for index in 0..<elementCount {
+                        let color = Float(sourceValues[index])
+                        destinationValues[index] = (color - 0.5) / shC0
+                    }
+                }
+            }
+
+            return buffer
+        }
         
         /*
          Core AI output shapes:
@@ -260,7 +290,7 @@ enum GaussianSplatBufferResourceCreator {
             from: opacities
         )
         
-        let colorBuffer = try makeLowLevelBuffer(
+        let colorBuffer = try makeDegreeZeroSHBuffer(
             from: colors
         )
         
