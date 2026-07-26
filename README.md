@@ -161,6 +161,16 @@ SharpOnPhone/
 ## Acknowledgements
 
 SHARP and Core AI Models are projects from Apple. Model weights remain subject
-to their upstream terms. This repository does not currently include a license
-for the application source code.
+to their upstream terms.
 
+## License
+
+The original SharpOnPhone application and conversion code is available under
+the [MIT License](LICENSE).
+
+Apple's SHARP model, model weights, and converted model artifacts are not
+covered by the MIT License. They remain subject to Apple's
+[Machine Learning Research Model License](https://github.com/apple/ml-sharp/blob/main/LICENSE_MODEL),
+which limits them to research purposes and does not permit commercial use.
+The model checkpoint and generated `.aimodel` are not included in this
+repository.
