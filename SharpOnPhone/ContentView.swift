@@ -17,17 +17,29 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            HomeScreen(
-                state: sharpRunner.state,
-                isModelLoaded: isModelLoaded,
-                onLoadModel: {
-                    try await sharpRunner.load()
-                },
-                onRunSharp: { image, data in
-                    try await sharpRunner.runSharp(on: image, with: data)
+        TabView {
+            Tab {
+                NavigationStack {
+                    ConvertScreen(
+                        state: sharpRunner.state,
+                        isModelLoaded: isModelLoaded,
+                        onLoadModel: {
+                            try await sharpRunner.load()
+                        },
+                        onRunSharp: { image, data in
+                            try await sharpRunner.runSharp(on: image, with: data)
+                        }
+                    )
                 }
-            )
+            } label: {
+                Label("Convert", systemImage: "wand.and.rays")
+            }
+            
+            Tab {
+                ARTestView()
+            } label: {
+                Label("AR", systemImage: "arkit")
+            }
         }
     }
 }

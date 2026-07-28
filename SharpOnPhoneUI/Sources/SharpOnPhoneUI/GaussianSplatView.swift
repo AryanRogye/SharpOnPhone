@@ -9,7 +9,7 @@ import RealityKit
 import SwiftUI
 
 struct GaussianSplatView: View {
-    let gaussianSplatBufferResource: GaussianSplatResource.BufferResource
+    let gaussianSplatBufferResource: SharpSplatBufferResource
 
     @State private var cameraPosition = SIMD3<Float>.zero
     @State private var cameraOrientation = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
@@ -23,6 +23,14 @@ struct GaussianSplatView: View {
     private let presentationScale: Float = 0.52
 
     var body: some View {
+#if targetEnvironment(simulator)
+        ContentUnavailableView(
+            "Gaussian Splat Preview Unavailable",
+            systemImage: "move.3d",
+            description: Text("RealityKit renders Gaussian splats on a physical device.")
+        )
+        .navigationTitle("Fly")
+#else
         ZStack {
             RealityView { content in
                 let resource = GaussianSplatResource(
@@ -86,6 +94,7 @@ struct GaussianSplatView: View {
         .task {
             await runFlightLoop()
         }
+#endif
     }
 
     private var flightControls: some View {

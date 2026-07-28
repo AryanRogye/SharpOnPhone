@@ -8,15 +8,30 @@
 
 /* Begin PBXBuildFile section */
 		9B7F07E230169851004DA2CC /* SharpOnPhoneUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9B7F07E130169851004DA2CC /* SharpOnPhoneUI */; };
+		9B7F08EF3016C81E004DA2CC /* SnapCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9B7F08EE3016C81E004DA2CC /* SnapCore */; };
+		9B7F08F13016C81E004DA2CC /* SnapCoreEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 9B7F08F03016C81E004DA2CC /* SnapCoreEngine */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		9B7F07CC301694DB004DA2CC /* SharpOnPhone.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SharpOnPhone.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9B7F08A73016C554004DA2CC /* Exceptions for "SharpOnPhone" folder in "SharpOnPhone" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9B7F07CB301694DB004DA2CC /* SharpOnPhone */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9B7F07CE301694DB004DA2CC /* SharpOnPhone */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9B7F08A73016C554004DA2CC /* Exceptions for "SharpOnPhone" folder in "SharpOnPhone" target */,
+			);
 			path = SharpOnPhone;
 			sourceTree = "<group>";
 		};
@@ -27,6 +42,8 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				9B7F07E230169851004DA2CC /* SharpOnPhoneUI in Frameworks */,
+				9B7F08EF3016C81E004DA2CC /* SnapCore in Frameworks */,
+				9B7F08F13016C81E004DA2CC /* SnapCoreEngine in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -67,6 +84,8 @@
 			name = SharpOnPhone;
 			packageProductDependencies = (
 				9B7F07E130169851004DA2CC /* SharpOnPhoneUI */,
+				9B7F08EE3016C81E004DA2CC /* SnapCore */,
+				9B7F08F03016C81E004DA2CC /* SnapCoreEngine */,
 			);
 			productName = SharpOnPhone;
 			productReference = 9B7F07CC301694DB004DA2CC /* SharpOnPhone.app */;
@@ -99,6 +118,7 @@
 			packageReferences = (
 				9B7F07DF301695EB004DA2CC /* XCRemoteSwiftPackageReference "coreai-models" */,
 				9B7F07E030169851004DA2CC /* XCLocalSwiftPackageReference "SharpOnPhoneUI" */,
+				9B7F08ED3016C81E004DA2CC /* XCLocalSwiftPackageReference "../SnapCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9B7F07CD301694DB004DA2CC /* Products */;
@@ -259,6 +279,7 @@
 				DEVELOPMENT_TEAM = B9P888266K;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SharpOnPhone/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -292,6 +313,7 @@
 				DEVELOPMENT_TEAM = B9P888266K;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SharpOnPhone/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -340,6 +362,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = SharpOnPhoneUI;
 		};
+		9B7F08ED3016C81E004DA2CC /* XCLocalSwiftPackageReference "../SnapCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../SnapCore;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -357,6 +383,14 @@
 		9B7F07E130169851004DA2CC /* SharpOnPhoneUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SharpOnPhoneUI;
+		};
+		9B7F08EE3016C81E004DA2CC /* SnapCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SnapCore;
+		};
+		9B7F08F03016C81E004DA2CC /* SnapCoreEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SnapCoreEngine;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

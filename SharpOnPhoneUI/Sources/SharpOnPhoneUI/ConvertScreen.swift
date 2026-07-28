@@ -1,5 +1,5 @@
 //
-//  HomeScreen.swift
+//  ConvertScreen.swift
 //  SharpOnPhoneUI
 //
 //  Created by Aryan Rogye on 7/26/26.
@@ -9,18 +9,18 @@ import SwiftUI
 import RealityKit
 import UIKit
 
-public struct HomeScreen: View {
+public struct ConvertScreen: View {
     
     public let state: String
     public let isModelLoaded: Bool
     public var onLoadModel: () async throws -> Void
-    public var onRunSharp: (UIImage, Data) async throws -> GaussianSplatResource.BufferResource
+    public var onRunSharp: (UIImage, Data) async throws -> SharpSplatBufferResource
     
     public init(
         state: String,
         isModelLoaded: Bool,
         onLoadModel: @escaping () async throws -> Void,
-        onRunSharp: @escaping (UIImage, Data) async throws -> GaussianSplatResource.BufferResource,
+        onRunSharp: @escaping (UIImage, Data) async throws -> SharpSplatBufferResource,
     ) {
         self.state = state
         self.onLoadModel = onLoadModel
@@ -57,110 +57,11 @@ public struct HomeScreen: View {
     }
 }
 
-struct LoadedModelView: View {
-    
-    @Binding var error: String?
-    @Binding var showError: Bool
-    public var onRunSharp: (UIImage, Data) async throws -> GaussianSplatResource.BufferResource
-    
-    @State private var isRunningSharp: Bool = false
-    @State private var showImagePicker: Bool = false
-    @State private var isImageProcessing: Bool = false
-    @State private var pickedImageURL: URL?
-    
-    // Store as UIImage
-    @State private var loadedImage: UIImage?
-    @State private var gaussianSplatBufferResource: GaussianSplatResource.BufferResource?
-    
-    var body: some View {
-        Section("Model Settings") {
-            Button("Pick Image") {
-                showImagePicker = true
-            }
-            .disabled(isImageProcessing)
-            .imagePicker(
-                showPicker: $showImagePicker,
-                isImageProcessing: $isImageProcessing,
-                pickedImageURL: $pickedImageURL
-            )
-            if let loadedImage {
-                Image(uiImage: loadedImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity)
-                    .frame(maxHeight: 300)
-                    .cornerRadius(12)
-                
-                Button {
-                    runSharp()
-                } label: {
-                    HStack {
-                        Text("Run Sharp")
-                        if isRunningSharp {
-                            ProgressView()
-                        }
-                    }
-                }
-                .disabled(isRunningSharp)
-                
-                if let gaussianSplatBufferResource {
-                    NavigationLink {
-                        GaussianSplatView(gaussianSplatBufferResource: gaussianSplatBufferResource)
-                    } label: {
-                        Text("View Gaussian Splat")
-                    }
-                }
-            }
-        }
-        .task(id: pickedImageURL) {
-            guard let pickedImageURL else {
-                loadedImage = nil
-                return
-            }
-            
-            // Load UIImage off the main thread
-            loadedImage = await Task.detached(priority: .userInitiated) {
-                if let data = try? Data(contentsOf: pickedImageURL) {
-                    return UIImage(data: data)
-                }
-                return nil
-            }.value
-        }
-    }
-    
-    private func runSharp() {
-        guard let pickedImageURL else { return }
-        guard let image = loadedImage else { return }
-        
-        let data: Data
-        do {
-            data = try Data(contentsOf: pickedImageURL)
-        } catch {
-            self.error = "Failed to Get Image Data: \(error.localizedDescription)"
-            self.showError = true
-            return
-        }
-        
-        if isRunningSharp { return }
-        Task { @MainActor in
-            isRunningSharp = true
-            defer { isRunningSharp = false }
-            do {
-                self.gaussianSplatBufferResource = try await onRunSharp(image, data)
-            } catch {
-                self.error = error.localizedDescription
-                self.showError = true
-            }
-        }
-    }
-}
-
-
 #Preview {
     
     @Previewable @State var isLoadingModel: Bool = false
     
-    HomeScreen(
+    ConvertScreen(
         state: "",
         isModelLoaded: false,
         onLoadModel: {
@@ -171,7 +72,10 @@ struct LoadedModelView: View {
         onRunSharp: { image, data in
             // 1. Simulate processing delay
             try? await Task.sleep(for: .seconds(2))
-            
+
+#if targetEnvironment(simulator)
+            return SharpSplatBufferResource()
+#else
             let splatCount = 1_000
             
             // 2. Generate mock Float arrays for each attribute
@@ -260,6 +164,7 @@ struct LoadedModelView: View {
                 opacity: opacDesc,
                 sphericalHarmonics: (shDesc, .zero)
             )
+#endif
         }
     )
 }
