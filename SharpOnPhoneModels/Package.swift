@@ -4,28 +4,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "SharpOnPhoneUI",
+    name: "SharpOnPhoneModels",
     platforms: [
         .iOS(.v27)
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "SharpOnPhoneUI",
-            targets: ["SharpOnPhoneUI"]
+            name: "SharpOnPhoneModels",
+            targets: ["SharpOnPhoneModels"]
         ),
-    ],
-    dependencies: [
-        .package(path: "../SharpOnPhoneModels")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "SharpOnPhoneUI",
-            dependencies: [
-                .product(name: "SharpOnPhoneModels", package: "SharpOnPhoneModels")
-            ],
+            name: "SharpOnPhoneModels",
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],

@@ -36,7 +36,9 @@ struct ContentView: View {
             }
             
             Tab {
-                ARTestView()
+                NavigationStack {
+                    ARTestView()
+                }
             } label: {
                 Label("AR", systemImage: "arkit")
             }

@@ -17,11 +17,22 @@ struct ARTestView: View {
             if let texture = manager.imageTexture {
                 ARCameraView(texture: texture)
                 ARInfoView(
+                    startedRecording: manager.isRecording,
                     trackingState: manager.trackingState,
                     cameraPosition: manager.cameraPosition,
-                    latestFrame: manager.latestFrame,
-                    onCaptureCurrentFrame: manager.captureCurrentFrame,
-                    onRestartBaseLocation: manager.runWorldTrackingSession
+                    recordedVideoURL: manager.recordedVideoURL,
+                    cameraInfo: manager.cameraInfo,
+                    recordedMeshes: manager.recordedMeshes,
+                    onRestartBaseLocation: manager.runWorldTrackingSession,
+                    onToggleRecording: {
+                        if manager.isRecording {
+                            manager.stopRecording()
+                        } else {
+                            // we restart the world tracking session so its (0,0,0) from
+                            // where we start recording
+                            manager.startRecording()
+                        }
+                    }
                 )
             } else {
                 Text("Loading AR Camera")

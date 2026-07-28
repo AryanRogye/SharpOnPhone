@@ -38,7 +38,8 @@ final class ARVideoRecorder: @unchecked Sendable {
     
     func append(
         pixelBuffer: CVPixelBuffer,
-        timestamp: TimeInterval
+        timestamp: TimeInterval,
+        completion: @escaping @Sendable (TimeInterval) -> Void
     ) {
         writingQueue.async { [weak self] in
             guard let self, isRecording else {
@@ -76,7 +77,9 @@ final class ARVideoRecorder: @unchecked Sendable {
                     withPresentationTime: presentationTime
                 )
                 
-                if !didAppend {
+                if didAppend {
+                    completion(elapsedTime)
+                } else {
                     print(
                         "Failed to append frame:",
                         writer.error?.localizedDescription ?? "Unknown error"
@@ -92,17 +95,19 @@ final class ARVideoRecorder: @unchecked Sendable {
         completion: @escaping @Sendable (Result<URL, Error>) -> Void
     ) {
         writingQueue.async { [weak self] in
-            guard
-                let self,
-                isRecording,
-                let writer,
-                let videoInput,
-                let outputURL
-            else {
+            guard let self, isRecording else {
+                completion(.failure(RecordingError.notRecording))
                 return
             }
-            
+
             isRecording = false
+
+            guard let writer, let videoInput, let outputURL else {
+                reset()
+                completion(.failure(RecordingError.noFramesRecorded))
+                return
+            }
+
             videoInput.markAsFinished()
             
             writer.finishWriting {
@@ -134,7 +139,7 @@ final class ARVideoRecorder: @unchecked Sendable {
             outputURL: outputURL,
             fileType: .mov
         )
-        
+
         let compressionProperties: [String: Any] = [
             AVVideoAverageBitRateKey: 20_000_000,
             AVVideoExpectedSourceFrameRateKey: 60,
@@ -154,7 +159,8 @@ final class ARVideoRecorder: @unchecked Sendable {
         )
         
         videoInput.expectsMediaDataInRealTime = true
-        
+        videoInput.transform = CGAffineTransform(rotationAngle: .pi / 2)
+
         let sourceAttributes: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String:
                 CVPixelBufferGetPixelFormatType(pixelBuffer),
@@ -206,6 +212,8 @@ extension ARVideoRecorder {
         case missingOutputURL
         case cannotAddVideoInput
         case cannotStartWriting
+        case notRecording
+        case noFramesRecorded
         
         var errorDescription: String? {
             switch self {
@@ -215,6 +223,10 @@ extension ARVideoRecorder {
                 return "Cannot add video input"
             case .cannotStartWriting:
                 return "Cannot start writing"
+            case .notRecording:
+                return "No recording is active"
+            case .noFramesRecorded:
+                return "No video frames were recorded"
             }
         }
     }

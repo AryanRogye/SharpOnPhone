@@ -6,53 +6,111 @@
 //
 
 import SwiftUI
+import SharpOnPhoneModels
 
 public struct ARInfoView: View {
     
+    let startedRecording: Bool
     let trackingState: String
     let cameraPosition: SIMD3<Float>
-    let latestFrame: ARCameraFrame?
-    let onCaptureCurrentFrame: () -> Void
+    let recordedVideoURL: URL?
+    let cameraInfo: [ARCameraInfo]
+    let recordedMeshes: [UUID: RecordedMeshAnchor]
     let onRestartBaseLocation: () -> Void
+    let onToggleRecording: () -> Void
     
     public init(
+        startedRecording: Bool,
         trackingState: String,
         cameraPosition: SIMD3<Float>,
-        latestFrame: ARCameraFrame?,
-        onCaptureCurrentFrame: @escaping () -> Void,
-        onRestartBaseLocation: @escaping () -> Void
+        recordedVideoURL: URL?,
+        cameraInfo: [ARCameraInfo],
+        recordedMeshes: [UUID: RecordedMeshAnchor],
+        onRestartBaseLocation: @escaping () -> Void,
+        onToggleRecording: @escaping () -> Void
     ) {
+        self.startedRecording = startedRecording
         self.trackingState = trackingState
         self.cameraPosition = cameraPosition
-        self.latestFrame = latestFrame
-        self.onCaptureCurrentFrame = onCaptureCurrentFrame
+        self.recordedVideoURL = recordedVideoURL
+        self.recordedMeshes = recordedMeshes
+        self.cameraInfo = cameraInfo
         self.onRestartBaseLocation = onRestartBaseLocation
+        self.onToggleRecording = onToggleRecording
     }
-    
-    @State private var showState: Bool = false
     
     public var body: some View {
         VStack(spacing: 16) {
-            ARStatsView(
-                trackingState: trackingState,
-                cameraPosition: cameraPosition,
-                latestFrame: latestFrame,
-                onCaptureCurrentFrame: onCaptureCurrentFrame,
-                onRestartBaseLocation: onRestartBaseLocation,
-            )
+            HStack {
+                Spacer()
+                ARStatsView(
+                    trackingState: trackingState,
+                    cameraPosition: cameraPosition,
+                    onRestartBaseLocation: onRestartBaseLocation,
+                )
+                RecordButton(
+                    startedRecording: startedRecording,
+                    onToggleRecording: onToggleRecording
+                )
+                .padding(.leading)
+                
+                if let recordedVideoURL {
+                    NavigationLink {
+                        RecordedVideoURL(
+                            url: recordedVideoURL,
+                            recordedMeshes: recordedMeshes,
+                            cameraInfo: cameraInfo
+                        )
+                    } label: {
+                        VideoDoneView()
+                    }
+                }
+                
+                Spacer()
+            }
             Spacer()
         }
     }
 }
 
+// MARK: - Video Done
+struct VideoDoneView: View {
+    var body: some View {
+        Image(systemName: "checkmark.circle.fill")
+            .contentShape(Rectangle())
+            .frame(width: 50, height: 50)
+            .glassEffect(.regular, in: .rect(cornerRadius: 25))
+    }
+}
+
+// MARK: - Record Button
+struct RecordButton: View {
+    
+    let startedRecording: Bool
+    let onToggleRecording: () -> Void
+    
+    var body: some View {
+        Button(action: onToggleRecording) {
+            Image(
+                systemName: startedRecording
+                ? "stop.fill"
+                : "record.circle.fill"
+            )
+            .frame(width: 50, height: 50)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular, in: .rect(cornerRadius: 25))
+    }
+}
+
+// MARK: - Stats View
 struct ARStatsView: View {
     
     let trackingState: String
     let cameraPosition: SIMD3<Float>
-    let latestFrame: ARCameraFrame?
-    let onCaptureCurrentFrame: () -> Void
     let onRestartBaseLocation: () -> Void
-
+    
     @State private var showState = false
     
     var body: some View {
@@ -105,18 +163,6 @@ struct ARStatsView: View {
                             alignment: .leading
                         )
                     
-                    HStack {
-                        Button("Capture Frame") {
-                            onCaptureCurrentFrame()
-                        }
-                        .buttonStyle(.glassProminent)
-                        
-                        if let frame = latestFrame {
-                            Text("Captured at \(frame.timestamp)")
-                        }
-                        
-                        Spacer()
-                    }
                     HStack {
                         Button("Restart Base Location") {
                             onRestartBaseLocation()
@@ -172,15 +218,18 @@ struct ARStatsView: View {
         )
         .ignoresSafeArea()
         ARInfoView(
+            startedRecording: false,
             trackingState: "Normal",
             cameraPosition: .init(
                 x: 0,
                 y: 0,
                 z: 0
             ),
-            latestFrame: nil,
-            onCaptureCurrentFrame: {},
-            onRestartBaseLocation: {}
+            recordedVideoURL: nil,
+            cameraInfo: [],
+            recordedMeshes: [:],
+            onRestartBaseLocation: {},
+            onToggleRecording: {}
         )
     }
 }

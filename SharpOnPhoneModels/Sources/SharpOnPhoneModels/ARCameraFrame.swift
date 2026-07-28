@@ -25,3 +25,4 @@ public struct ARCameraFrame: @unchecked Sendable {
         self.timestamp = timestamp
     }
 }
+
