@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>I need this bro</string>
+
     <key>NSCameraUsageDescription</key>
     <string>SharpOnPhone uses the camera to capture images and track device movement for 3D scene reconstruction.</string>
 </dict>

@@ -18,6 +18,7 @@ public struct ARInfoView: View {
     let recordedMeshes: [UUID: RecordedMeshAnchor]
     let onRestartBaseLocation: () -> Void
     let onToggleRecording: () -> Void
+    let onSave: (String) -> Void
     
     public init(
         startedRecording: Bool,
@@ -27,7 +28,8 @@ public struct ARInfoView: View {
         cameraInfo: [ARCameraInfo],
         recordedMeshes: [UUID: RecordedMeshAnchor],
         onRestartBaseLocation: @escaping () -> Void,
-        onToggleRecording: @escaping () -> Void
+        onToggleRecording: @escaping () -> Void,
+        onSave: @escaping (String) -> Void = { _ in }
     ) {
         self.startedRecording = startedRecording
         self.trackingState = trackingState
@@ -37,6 +39,7 @@ public struct ARInfoView: View {
         self.cameraInfo = cameraInfo
         self.onRestartBaseLocation = onRestartBaseLocation
         self.onToggleRecording = onToggleRecording
+        self.onSave = onSave
     }
     
     public var body: some View {
@@ -56,10 +59,11 @@ public struct ARInfoView: View {
                 
                 if let recordedVideoURL {
                     NavigationLink {
-                        RecordedVideoURL(
+                        RecordedVideoView(
                             url: recordedVideoURL,
                             recordedMeshes: recordedMeshes,
-                            cameraInfo: cameraInfo
+                            cameraInfo: cameraInfo,
+                            onSave: onSave
                         )
                     } label: {
                         VideoDoneView()
@@ -68,6 +72,7 @@ public struct ARInfoView: View {
                 
                 Spacer()
             }
+            .padding(.top, 38)
             Spacer()
         }
     }

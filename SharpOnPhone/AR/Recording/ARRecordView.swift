@@ -1,16 +1,22 @@
 //
-//  ARTestView.swift
+//  ARRecordView.swift
 //  SharpOnPhone
 //
-//  Created by Aryan Rogye on 7/26/26.
+//  Created by Aryan Rogye on 7/28/26.
 //
 
 import SwiftUI
-import SnapCoreEngine
 import SharpOnPhoneUI
+import SharpOnPhoneModels
 
-struct ARTestView: View {
-    @State private var manager = ARSessionManager()
+struct ARRecordView: View {
+    
+    @Bindable var manager: ARSessionManager
+    @Binding var error: String?
+    @Binding var showError: Bool
+    let cameraInfoStore : CameraInfoStore
+    
+    @State private var isSaving: Bool = false
     
     var body: some View {
         ZStack {
@@ -31,6 +37,24 @@ struct ARTestView: View {
                             // we restart the world tracking session so its (0,0,0) from
                             // where we start recording
                             manager.startRecording()
+                        }
+                    },
+                    onSave: { name in
+                        if isSaving { return }
+                        guard let url = manager.recordedVideoURL else { return }
+                        Task {
+                            isSaving = true
+                            defer { isSaving = false }
+                            do {
+                                try await cameraInfoStore.createNewProject(
+                                    named: name,
+                                    withInfo: manager.cameraInfo,
+                                    videoUrl: url
+                                )
+                            } catch {
+                                self.error = error.localizedDescription
+                                self.showError = true
+                            }
                         }
                     }
                 )

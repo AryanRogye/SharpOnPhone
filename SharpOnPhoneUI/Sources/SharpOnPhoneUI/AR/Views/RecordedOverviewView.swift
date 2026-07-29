@@ -1,43 +1,40 @@
 //
-//  RecordedVideoURL.swift
+//  RecordedOverviewView.swift
 //  SharpOnPhoneUI
 //
-//  Created by Aryan Rogye on 7/27/26.
+//  Created by Aryan Rogye on 7/28/26.
 //
 
-import AVKit
-import SwiftUI
 import SharpOnPhoneModels
+import SwiftUI
+import AVKit
 
-struct RecordedVideoView: View {
+public struct RecordedOverviewView: View {
     
-    let cameraInfo: [ARCameraInfo]
-    let recordedMeshes: [UUID: RecordedMeshAnchor]
-    let onSave: (String) -> Void
+    let savedProject: CameraInfoStore.SavedProject
+    
+    var cameraInfo: [ARCameraInfo] {
+        savedProject.cameraInfo.sorted {
+            $0.timestamp < $1.timestamp
+        }
+    }
     
     @State private var player: AVPlayer
     @State private var currentCameraInfo: ARCameraInfo?
     @State private var timeObserver: Any?
     @State private var showSaveRecording: Bool = false
     
-    init(
-        url: URL,
-        recordedMeshes: [UUID: RecordedMeshAnchor],
-        cameraInfo: [ARCameraInfo],
-        onSave: @escaping (String) -> Void
+    public init(
+        savedProject: CameraInfoStore.SavedProject,
     ) {
-        self.onSave = onSave
-        self.cameraInfo = cameraInfo.sorted {
-            $0.timestamp < $1.timestamp
-        }
-        self.recordedMeshes = recordedMeshes
+        self.savedProject = savedProject
         
         _player = State(
-            initialValue: AVPlayer(url: url)
+            initialValue: AVPlayer(url: savedProject.videoURL)
         )
     }
     
-    var body: some View {
+    public var body: some View {
         VStack {
             VideoPlayer(player: player)
             
@@ -57,26 +54,9 @@ struct RecordedVideoView: View {
                     Text("y: \(position.y)")
                     Text("z: \(position.z)")
                     NavigationLink {
-                        RealityKitTraverseARCameraInfoView(
-                            cameraInfo: cameraInfo,
-                            recordedMeshes: recordedMeshes
-                        )
-                    } label: {
-                        Text("View Path Taken In 3D")
-                    }
-                    .buttonStyle(.glassProminent)
-
-                    NavigationLink {
-
+                        
                     } label: {
                         Text("View Gaussian Splat")
-                    }
-                    .buttonStyle(.glassProminent)
-
-                    Button {
-                        showSaveRecording = true
-                    } label: {
-                        Text("Save Recording")
                     }
                     .buttonStyle(.glassProminent)
                 }
@@ -90,12 +70,6 @@ struct RecordedVideoView: View {
         .onDisappear {
             stopObservingPlayback()
             player.pause()
-        }
-        .sheet(isPresented: $showSaveRecording) {
-            SaveRecordingView { name in
-                onSave(name)
-                showSaveRecording = false
-            }
         }
     }
     
@@ -176,38 +150,5 @@ struct RecordedVideoView: View {
         return previousDistance <= nextDistance
         ? previous
         : next
-    }
-}
-
-private struct SaveRecordingView: View {
-
-    let onSave: (String) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Recording name", text: $name)
-            }
-            .navigationTitle("Save Recording")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(name)
-                    }
-                    .disabled(
-                        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    )
-                }
-            }
-        }
     }
 }

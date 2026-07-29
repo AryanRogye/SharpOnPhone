@@ -54,6 +54,21 @@ public struct ARCameraInfo: Sendable {
      */
     public let intrinsics: simd_float3x3
     public let timestamp: TimeInterval
+    
+    
+    var codableRepresentation: ARCameraInfoCodableRepresentation {
+        .init(from: self)
+    }
+    
+    public init(
+        from representation: ARCameraInfoCodableRepresentation
+    ) {
+        self.init(
+            cameraTransform: representation.cameraTransform.simdRepresentation,
+            intrinsics: representation.intrinsics.simdRepresentation,
+            timestamp: representation.timestamp
+        )
+    }
 
     public init(
         cameraTransform: simd_float4x4,
