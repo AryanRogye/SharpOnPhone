@@ -54,7 +54,7 @@ public struct RecordedOverviewView: View {
                     Text("y: \(position.y)")
                     Text("z: \(position.z)")
                     NavigationLink {
-                        
+                        GaussianSplatRecontructionView(savedProject: savedProject)
                     } label: {
                         Text("View Gaussian Splat")
                     }

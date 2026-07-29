@@ -66,13 +66,6 @@ struct RecordedVideoView: View {
                     }
                     .buttonStyle(.glassProminent)
 
-                    NavigationLink {
-
-                    } label: {
-                        Text("View Gaussian Splat")
-                    }
-                    .buttonStyle(.glassProminent)
-
                     Button {
                         showSaveRecording = true
                     } label: {
