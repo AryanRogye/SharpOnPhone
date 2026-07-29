@@ -11,6 +11,7 @@ import SharpOnPhoneUI
 
 struct SavedProjectsView: View {
     
+    let unloadMemory: () -> Void
     public var onRunSharp: (UIImage, Double) async throws -> SharpSplatBufferResource
     @Binding var error: String?
     @Binding var showError: Bool
@@ -36,6 +37,7 @@ struct SavedProjectsView: View {
                             NavigationLink {
                                 RecordedOverviewView(
                                     onRunSharp: onRunSharp,
+                                    unloadMemory: unloadMemory,
                                     savedProject: project
                                 )
                             } label: {

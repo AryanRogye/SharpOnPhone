@@ -11,6 +11,7 @@ import AVKit
 
 public struct RecordedOverviewView: View {
     
+    let unloadMemory: () -> Void
     let onRunSharp: (UIImage, Double) async throws -> SharpSplatBufferResource
     let savedProject: CameraInfoStore.SavedProject
     
@@ -23,9 +24,11 @@ public struct RecordedOverviewView: View {
     
     public init(
         onRunSharp: @escaping (UIImage, Double) async throws -> SharpSplatBufferResource,
+        unloadMemory: @escaping () -> Void,
         savedProject: CameraInfoStore.SavedProject,
     ) {
         self.onRunSharp = onRunSharp
+        self.unloadMemory = unloadMemory
         self.savedProject = savedProject
         _playerController = State(
             initialValue: ARVideoPlayerController(
@@ -56,6 +59,7 @@ public struct RecordedOverviewView: View {
                     NavigationLink {
                         GaussianSplatRecontructionView(
                             onRunSharp: onRunSharp,
+                            unloadMemory: unloadMemory,
                             savedProject: savedProject
                         )
                     } label: {

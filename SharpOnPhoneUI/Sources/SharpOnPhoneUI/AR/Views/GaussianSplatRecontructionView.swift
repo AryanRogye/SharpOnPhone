@@ -16,14 +16,17 @@ struct PosedSplat {
 struct GaussianSplatRecontructionView: View {
     
     let onRunSharp: (UIImage, Double) async throws -> SharpSplatBufferResource
+    let unloadMemory: () -> Void
     let savedProject: CameraInfoStore.SavedProject
     
     @State private var playerController: ARVideoPlayerController
     
     init(
         onRunSharp: @escaping (UIImage, Double) async throws -> SharpSplatBufferResource,
+        unloadMemory: @escaping () -> Void,
         savedProject: CameraInfoStore.SavedProject
     ) {
+        self.unloadMemory = unloadMemory
         self.onRunSharp = onRunSharp
         self.savedProject = savedProject
         _playerController = State(
@@ -37,31 +40,79 @@ struct GaussianSplatRecontructionView: View {
     @State private var error: String?
     @State private var showError: Bool = false
     @State private var isProcessing: Bool = false
-    
-    @State private var processedSplat: PosedSplat?
+    @State private var processAllTask: Task<Void, Never>?
+    @State private var processedSplats: [PosedSplat] = []
+    @State private var stepForProcess: Int = 1
     
     var body: some View {
         VStack {
-            ARVideoPlayer(controller: playerController)
             
-            if let processedSplat {
-                NavigationLink {
-                    PosedSplatPreview(posedSplat: processedSplat)
-                } label: {
-                    Text("View Guassian Splat Reconstruction")
+            ZStack {
+                ARVideoPlayer(controller: playerController)
+                
+                PhoneStatsView()
+            }
+            
+            if !processedSplats.isEmpty {
+                HStack {
+                    NavigationLink {
+                        ZStack {
+                            PosedSplatPreview(posedSplats: processedSplats)
+                            
+                            PhoneStatsView()
+                        }
+                    } label: {
+                        Text("View Guassian Splat Reconstruction")
+                    }
+                    .buttonStyle(.glassProminent)
+                    .disabled(isProcessing)
+                    
+                    Text("Splats: \(processedSplats.count)")
+                }
+            }
+            VStack {
+                Text("\(playerController.currentFrameIndex)/\(playerController.totalFrameCount)")
+                
+                Button("Free Memory") {
+                    unloadMemory()
                 }
                 .buttonStyle(.glassProminent)
             }
+            
             HStack {
+                Button("Process All") {
+                    self.processAll()
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(isProcessing)
+                
                 Button("Process") {
                     self.process()
                 }
                 .buttonStyle(.glassProminent)
                 .disabled(isProcessing)
+                
                 Button("Step Forward") {
                     self.playerController.stepForward()
                 }
+                .buttonStyle(.glassProminent)
             }
+            
+            HStack {
+                Button("Cancel Process") {
+                    processAllTask?.cancel()
+                }
+                .buttonStyle(.glassProminent)
+                
+                Picker("Step Size", selection: $stepForProcess) {
+                    ForEach(1...30, id: \.self) { value in
+                        Text("\(value)")
+                            .tag(value)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            .padding(.bottom, 4)
         }
         .alert(isPresented: $showError) {
             Alert(
@@ -71,11 +122,103 @@ struct GaussianSplatRecontructionView: View {
         }
     }
     
+    private func processAll() {
+        processAllTask?.cancel()
+        processAllTask = Task { @MainActor in
+            isProcessing = true
+            defer { isProcessing = false }
+            
+            // Forces frame metadata to load.
+            await playerController.seek(
+                toFrame: 0,
+                pause: true
+            )
+            
+            let frameCount = playerController.totalFrameCount
+            
+            guard frameCount > 0 else {
+                error = "Unable to determine video frame count."
+                showError = true
+                return
+            }
+            
+            for index in stride(
+                from: 0,
+                to: frameCount,
+                by: stepForProcess
+            ) {
+                guard !Task.isCancelled else {
+                    return
+                }
+                
+                await playerController.seek(
+                    toFrame: index,
+                    pause: true
+                )
+                
+                let succeeded = await processCurrentFrame()
+                
+                if !succeeded {
+                    return
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func processCurrentFrame() async -> Bool {
+        guard
+            let image = await playerController.freezeAndCaptureCurrentFrame(),
+            let cameraInfo = playerController.currentCameraInfo
+        else {
+            error = """
+        CurrentCameraInfo Nil: \(playerController.currentCameraInfo == nil), \
+        CurrentFrame Nil: \(playerController.currentFrame == nil)
+        """
+            showError = true
+            return false
+        }
+        
+        // Avoid processing another video frame mapped to the same camera sample.
+        guard !processedSplats.contains(where: {
+            $0.cameraInfo.id == cameraInfo.id
+        }) else {
+            return true
+        }
+        
+        let focalLength = cameraInfo.intrinsics.columns.1.y
+        let disparityFactor =
+        Double(focalLength) / Double(image.size.width)
+        
+        do {
+            let resource = try await onRunSharp(
+                image,
+                disparityFactor
+            )
+            
+            processedSplats.append(
+                .init(
+                    resource: resource,
+                    cameraInfo: cameraInfo
+                )
+            )
+            
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            showError = true
+            return false
+        }
+    }
+    
     private func process() {
         if isProcessing { return }
         Task { @MainActor in
             isProcessing = true
-            defer { isProcessing = false }
+            defer {
+                playerController.unfreeze()
+                isProcessing = false
+            }
             
             let image = await playerController.freezeAndCaptureCurrentFrame()
             
@@ -86,11 +229,18 @@ struct GaussianSplatRecontructionView: View {
                 let focalLength = cameraInfo.intrinsics.columns.1.y
                 let disparityFactor =
                     Double(focalLength) / Double(image.size.width)
-                processedSplat = nil
-                
                 do {
                     let resource = try await onRunSharp(image, disparityFactor)
-                    processedSplat = .init(resource: resource, cameraInfo: cameraInfo)
+                    
+                    // remove processedSplat if duplicate found
+                    processedSplats.removeAll(where: { $0.cameraInfo.id == cameraInfo.id })
+                    processedSplats.append(
+                        .init(
+                            resource: resource,
+                            cameraInfo: cameraInfo
+                        )
+                    )
+                    
                 } catch {
                     self.error = error.localizedDescription
                     self.showError = true
@@ -108,14 +258,15 @@ import RealityKit
 
 struct PosedSplatPreview: View {
     
-    let posedSplat: PosedSplat
+    let posedSplats: [PosedSplat]
     @State private var cameraController: RealityKitTraverseCameraController
 
-    init(posedSplat: PosedSplat) {
-        self.posedSplat = posedSplat
+    init(posedSplats: [PosedSplat]) {
+        self.posedSplats = posedSplats
+        
         _cameraController = State(
             initialValue: RealityKitTraverseCameraController(
-                cameraInfo: [posedSplat.cameraInfo]
+                cameraInfo: posedSplats.map(\.cameraInfo)
             )
         )
     }
@@ -142,35 +293,34 @@ struct PosedSplatPreview: View {
 
         ZStack {
             RealityView { content in
-                let resource = GaussianSplatResource(
-                    posedSplat.resource
-                )
-                
-                // SHARP outputs activated scale and opacity values. Its color
-                // output is linear RGB and is converted to degree-zero SH
-                // coefficients while creating the buffer resource.
-                resource.scaleActivation = .identity
-                resource.opacityActivation = .identity
-                resource.projectionMode = .perspective
-                resource.sortingMode = .depth
-                if let linearSRGB = CGColorSpace(name: CGColorSpace.linearSRGB) {
-                    resource.colorSpace = linearSRGB
+                for (index, splat) in posedSplats.enumerated() {
+                    let resource = GaussianSplatResource(splat.resource)
+                    
+                    resource.scaleActivation = .identity
+                    resource.opacityActivation = .identity
+                    resource.projectionMode = .perspective
+                    resource.sortingMode = .depth
+                    
+                    if let linearSRGB = CGColorSpace(
+                        name: CGColorSpace.linearSRGB
+                    ) {
+                        resource.colorSpace = linearSRGB
+                    }
+                    
+                    let entity = Entity()
+                    entity.name = "sharp-splat-\(index)"
+                    entity.components.set(
+                        GaussianSplatComponent(resource)
+                    )
+                    entity.transform = Transform(
+                        matrix:
+                            splat.cameraInfo.cameraTransform
+                        * sharpToARKit
+                    )
+                    
+                    content.add(entity)
                 }
-
-                let splatEntity = Entity()
-                splatEntity.name = "sharp-splat"
-                splatEntity.components.set(
-                    GaussianSplatComponent(resource)
-                )
-                splatEntity.transform = Transform(
-                    matrix:
-                        posedSplat.cameraInfo.cameraTransform
-                    * sharpToARKit
-                )
-                
-                content.camera = .virtual
                 content.add(cameraController.makeCamera())
-                content.add(splatEntity)
             } update: { content in
                 if let camera = content.entities.first(
                     where: {

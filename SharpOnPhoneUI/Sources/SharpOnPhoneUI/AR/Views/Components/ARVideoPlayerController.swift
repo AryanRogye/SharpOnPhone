@@ -19,6 +19,10 @@ public final class ARVideoPlayerController {
     
     public private(set) var currentTime: TimeInterval = 0
     public private(set) var duration: TimeInterval = 0
+    public private(set) var nominalFrameRate: Float = 0
+    public private(set) var totalFrameCount: Int = 0
+    /// Zero-based index of the frame at `currentTime`.
+    public private(set) var currentFrameIndex: Int = 0
     public private(set) var isPlaying = false
     public private(set) var isFrozen = false
     public private(set) var isCapturingFrame = false
@@ -43,6 +47,10 @@ public final class ARVideoPlayerController {
             return
         }
         
+        Task {
+            await loadFrameMetadata()
+        }
+        
         let interval = CMTime(
             seconds: 1.0 / 30.0,
             preferredTimescale: 600
@@ -65,10 +73,7 @@ public final class ARVideoPlayerController {
                 return
             }
             
-            currentTime = time.seconds
-            currentCameraInfo = closestCameraInfo(
-                to: time.seconds
-            )
+            updatePlaybackState(to: time.seconds)
             
             updateDuration()
         }
@@ -197,6 +202,33 @@ public final class ARVideoPlayerController {
         seek(to: seconds, pause: false)
     }
     
+    /// Seeks to a zero-based video frame index.
+    ///
+    /// The requested index is clamped to the video's available frame range.
+    /// By default, playback pauses and remains on the requested frame.
+    public func seek(
+        toFrame index: Int,
+        pause shouldPause: Bool = true
+    ) async {
+        if nominalFrameRate <= 0 || totalFrameCount <= 0 {
+            await loadFrameMetadata()
+        }
+        
+        guard nominalFrameRate > 0, totalFrameCount > 0 else {
+            return
+        }
+        
+        let clampedIndex = min(
+            max(index, 0),
+            totalFrameCount - 1
+        )
+        let seconds =
+            Double(clampedIndex) / Double(nominalFrameRate)
+        
+        seek(to: seconds, pause: shouldPause)
+        currentFrameIndex = clampedIndex
+    }
+    
     /// Pauses playback and seeks to an exact time, keeping the video on that frame.
     public func seekAndPause(at seconds: TimeInterval) {
         seek(to: seconds, pause: true)
@@ -243,7 +275,51 @@ public final class ARVideoPlayerController {
         }
         
         currentTime = time
+        
+        if nominalFrameRate > 0 {
+            let frameIndex = Int(
+                floor(time * Double(nominalFrameRate))
+            )
+            currentFrameIndex = min(
+                max(frameIndex, 0),
+                max(totalFrameCount - 1, 0)
+            )
+        }
+        
         currentCameraInfo = closestCameraInfo(to: time)
+    }
+    
+    private func loadFrameMetadata() async {
+        guard let asset = player.currentItem?.asset else {
+            return
+        }
+        
+        do {
+            let assetDuration = try await asset.load(.duration)
+            let tracks = try await asset.loadTracks(withMediaType: .video)
+            
+            guard let videoTrack = tracks.first else {
+                return
+            }
+            
+            let frameRate = try await videoTrack.load(.nominalFrameRate)
+            let durationSeconds = assetDuration.seconds
+            
+            guard frameRate > 0, durationSeconds.isFinite else {
+                return
+            }
+            
+            duration = durationSeconds
+            nominalFrameRate = frameRate
+            totalFrameCount = Int(
+                (durationSeconds * Double(frameRate)).rounded()
+            )
+            updatePlaybackState(to: currentTime)
+        } catch {
+            nominalFrameRate = 0
+            totalFrameCount = 0
+            currentFrameIndex = 0
+        }
     }
     
     private func updateDuration() {

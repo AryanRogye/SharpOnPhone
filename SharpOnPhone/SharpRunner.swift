@@ -80,6 +80,12 @@ final class SharpRunner {
     @ObservationIgnored
     private(set) var mainFunction: InferenceFunction?
     
+    public func unloadMemory() {
+        self.model = nil
+        self.mainFunction = nil
+        self.state = "Idle"
+    }
+    
     func load() async throws {
         state = "Loading Model From Bundle"
         
@@ -143,6 +149,9 @@ final class SharpRunner {
     }
     
     public func runSharp(on image: UIImage, with data: Data) async throws -> SharpSplatBufferResource {
+        if model == nil || mainFunction == nil {
+            try await load()
+        }
         
         guard model != nil else {
             throw SharpRunnerError.modelNotLoaded

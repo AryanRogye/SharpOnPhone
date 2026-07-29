@@ -9,6 +9,9 @@ import Foundation
 import simd
 
 public struct ARCameraInfo: Sendable {
+    
+    public let id = UUID()
+    
     /**
      * contains x,y,z
      * [

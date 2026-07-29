@@ -38,9 +38,12 @@ struct ContentView: View {
             Tab {
                 NavigationStack {
                     ARRootView(
+                        unloadMemory: {
+                            sharpRunner.unloadMemory()
+                        },
                         onRunSharp: { image, disparityFactor in
                             try await sharpRunner.runSharp(on: image, disparityFactor: disparityFactor)
-                        }
+                        },
                     )
                 }
             } label: {
