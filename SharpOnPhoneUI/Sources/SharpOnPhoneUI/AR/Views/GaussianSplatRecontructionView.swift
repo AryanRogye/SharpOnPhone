@@ -11,6 +11,7 @@ import SharpOnPhoneModels
 struct PosedSplat {
     let resource: SharpSplatBufferResource
     let cameraInfo: ARCameraInfo
+    let imageSize: CGSize
 }
 
 struct GaussianSplatRecontructionView: View {
@@ -199,7 +200,8 @@ struct GaussianSplatRecontructionView: View {
             processedSplats.append(
                 .init(
                     resource: resource,
-                    cameraInfo: cameraInfo
+                    cameraInfo: cameraInfo,
+                    imageSize: image.size
                 )
             )
             
@@ -237,7 +239,8 @@ struct GaussianSplatRecontructionView: View {
                     processedSplats.append(
                         .init(
                             resource: resource,
-                            cameraInfo: cameraInfo
+                            cameraInfo: cameraInfo,
+                            imageSize: image.size
                         )
                     )
                     
@@ -294,6 +297,21 @@ struct PosedSplatPreview: View {
         ZStack {
             RealityView { content in
                 for (index, splat) in posedSplats.enumerated() {
+                    let imageSize = splat.imageSize
+                    let width = Float(imageSize.width)
+                    let height = Float(imageSize.height)
+                    let focalLength = splat.cameraInfo.intrinsics.columns.1.y
+                    
+                    let ndcToMetric = simd_float4x4(
+                        diagonal: SIMD4<Float>(
+                            width / (2 * focalLength),
+                            height / (2 * focalLength),
+                            1,
+                            1
+                        )
+                    )
+                    
+                    
                     let resource = GaussianSplatResource(splat.resource)
                     
                     resource.scaleActivation = .identity
@@ -315,7 +333,8 @@ struct PosedSplatPreview: View {
                     entity.transform = Transform(
                         matrix:
                             splat.cameraInfo.cameraTransform
-                        * sharpToARKit
+                            * sharpToARKit
+                            * ndcToMetric
                     )
                     
                     content.add(entity)
