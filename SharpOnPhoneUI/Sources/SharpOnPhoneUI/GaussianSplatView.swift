@@ -9,7 +9,7 @@ import RealityKit
 import SwiftUI
 
 struct GaussianSplatView: View {
-    let gaussianSplatBufferResource: GaussianSplatResource.BufferResource
+    let gaussianSplatBufferResource: SharpSplatBufferResource
 
     @State private var cameraPosition = SIMD3<Float>.zero
     @State private var cameraOrientation = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
@@ -23,6 +23,14 @@ struct GaussianSplatView: View {
     private let presentationScale: Float = 0.52
 
     var body: some View {
+#if targetEnvironment(simulator)
+        ContentUnavailableView(
+            "Gaussian Splat Preview Unavailable",
+            systemImage: "move.3d",
+            description: Text("RealityKit renders Gaussian splats on a physical device.")
+        )
+        .navigationTitle("Fly")
+#else
         ZStack {
             RealityView { content in
                 let resource = GaussianSplatResource(
@@ -86,6 +94,7 @@ struct GaussianSplatView: View {
         .task {
             await runFlightLoop()
         }
+#endif
     }
 
     private var flightControls: some View {
@@ -285,81 +294,5 @@ struct GaussianSplatView: View {
         verticalInput = 0
         previousLookTranslation = .zero
         previousMagnification = 1
-    }
-}
-
-private struct FlightStick: View {
-    @Binding var input: SIMD2<Float>
-
-    let symbol: String
-    let accessibilityName: String
-
-    @State private var knobOffset = CGSize.zero
-
-    var body: some View {
-        GeometryReader { proxy in
-            let radius = min(proxy.size.width, proxy.size.height) / 2
-            let travel = radius - 27
-
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        Circle()
-                            .stroke(.white.opacity(0.22), lineWidth: 1)
-                    }
-
-                Circle()
-                    .fill(.regularMaterial)
-                    .frame(width: 52, height: 52)
-                    .overlay {
-                        Image(systemName: symbol)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.primary)
-                    }
-                    .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
-                    .offset(knobOffset)
-            }
-            .contentShape(Circle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        let offset = clamped(
-                            value.translation,
-                            limit: travel
-                        )
-                        knobOffset = offset
-                        input = SIMD2<Float>(
-                            Float(offset.width / travel),
-                            Float(offset.height / travel)
-                        )
-                    }
-                    .onEnded { _ in
-                        input = .zero
-                        withAnimation(.spring(duration: 0.24, bounce: 0.28)) {
-                            knobOffset = .zero
-                        }
-                    }
-            )
-        }
-        .frame(width: 126, height: 126)
-        .accessibilityElement()
-        .accessibilityLabel(accessibilityName)
-    }
-
-    private func clamped(
-        _ translation: CGSize,
-        limit: CGFloat
-    ) -> CGSize {
-        let length = hypot(translation.width, translation.height)
-        guard length > limit, length > 0 else {
-            return translation
-        }
-
-        let scale = limit / length
-        return CGSize(
-            width: translation.width * scale,
-            height: translation.height * scale
-        )
     }
 }
