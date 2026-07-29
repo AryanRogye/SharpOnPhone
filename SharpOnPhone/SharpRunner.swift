@@ -10,6 +10,7 @@ import Foundation
 import UIKit
 import Metal
 import RealityKit
+import SharpOnPhoneUI
 
 enum SharpRunnerError: LocalizedError {
     case coreAIModelNotFound
@@ -114,7 +115,26 @@ final class SharpRunner {
         state = "Ready"
     }
     
-    public func runSharp(on image: UIImage, with data: Data) async throws -> GaussianSplatResource.BufferResource {
+    public func runSharp(on image: UIImage, disparityFactor: Double) async throws -> SharpSplatBufferResource {
+        guard model != nil else {
+            throw SharpRunnerError.modelNotLoaded
+        }
+        guard let mainFunction else {
+            throw SharpRunnerError.mainFunctionNotLoaded
+        }
+        
+        guard let imageNDArray = image.toFloat16NDArray() else {
+            throw SharpRunnerError.cantConvertImageToNDArray
+        }
+        
+        return try await runSharp(
+            imageNDArray: imageNDArray,
+            disparityFactor: disparityFactor,
+            mainFunction: mainFunction
+        )
+    }
+    
+    public func runSharp(on image: UIImage, with data: Data) async throws -> SharpSplatBufferResource {
         
         guard model != nil else {
             throw SharpRunnerError.modelNotLoaded
@@ -134,6 +154,20 @@ final class SharpRunner {
         }
         let width = Double(image.size.width)
         let disparityFactor = focalLengthInPixels / width
+        
+        return try await runSharp(
+            imageNDArray: imageNDArray,
+            disparityFactor: disparityFactor,
+            mainFunction: mainFunction
+        )
+    }
+    
+    /// Main Run Sharp Function
+    private func runSharp(
+        imageNDArray: NDArray,
+        disparityFactor: Double,
+        mainFunction: InferenceFunction
+    ) async throws -> SharpSplatBufferResource {
         let disparityFactorNDArray = createDisparityNDArray(with: disparityFactor)
         
         print("Image NDArray: \(imageNDArray)")

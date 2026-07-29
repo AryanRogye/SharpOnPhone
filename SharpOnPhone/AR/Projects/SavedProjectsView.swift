@@ -11,9 +11,11 @@ import SharpOnPhoneUI
 
 struct SavedProjectsView: View {
     
-    @State var savedProjects: [CameraInfoStore.SavedProject] = []
+    public var onRunSharp: (UIImage, Double) async throws -> SharpSplatBufferResource
     @Binding var error: String?
     @Binding var showError: Bool
+    
+    @State var savedProjects: [CameraInfoStore.SavedProject] = []
     let cameraInfoStore = CameraInfoStore()
     @State private var isLoadingProjects: Bool = false
     
@@ -33,6 +35,7 @@ struct SavedProjectsView: View {
                         ForEach(savedProjects) { project in
                             NavigationLink {
                                 RecordedOverviewView(
+                                    onRunSharp: onRunSharp,
                                     savedProject: project
                                 )
                             } label: {

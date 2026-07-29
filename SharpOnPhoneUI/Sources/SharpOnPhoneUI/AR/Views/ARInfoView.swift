@@ -79,7 +79,7 @@ public struct ARInfoView: View {
 }
 
 // MARK: - Video Done
-struct VideoDoneView: View {
+private struct VideoDoneView: View {
     var body: some View {
         Image(systemName: "checkmark.circle.fill")
             .contentShape(Rectangle())
@@ -89,7 +89,7 @@ struct VideoDoneView: View {
 }
 
 // MARK: - Record Button
-struct RecordButton: View {
+private struct RecordButton: View {
     
     let startedRecording: Bool
     let onToggleRecording: () -> Void
@@ -110,7 +110,7 @@ struct RecordButton: View {
 }
 
 // MARK: - Stats View
-struct ARStatsView: View {
+private struct ARStatsView: View {
     
     let trackingState: String
     let cameraPosition: SIMD3<Float>
@@ -212,6 +212,86 @@ struct ARStatsView: View {
     }
 }
 
+// MARK: - Recorded Video View
+private struct RecordedVideoView: View {
+    
+    let url: URL
+    let cameraInfo: [ARCameraInfo]
+    let recordedMeshes: [UUID: RecordedMeshAnchor]
+    let onSave: (String) -> Void
+    
+    @State private var playerController: ARVideoPlayerController
+    @State private var showSaveRecording = false
+    
+    init(
+        url: URL,
+        recordedMeshes: [UUID: RecordedMeshAnchor],
+        cameraInfo: [ARCameraInfo],
+        onSave: @escaping (String) -> Void
+    ) {
+        self.url = url
+        self.onSave = onSave
+        self.cameraInfo = cameraInfo
+        self.recordedMeshes = recordedMeshes
+        _playerController = State(
+            initialValue: ARVideoPlayerController(
+                url: url,
+                cameraInfo: cameraInfo
+            )
+        )
+    }
+    
+    var body: some View {
+        VStack {
+            ARVideoPlayer(controller: playerController)
+            
+            if let currentCameraInfo = playerController.currentCameraInfo {
+                let transform = currentCameraInfo.cameraTransform
+                
+                let position = SIMD3<Float>(
+                    transform.columns.3.x,
+                    transform.columns.3.y,
+                    transform.columns.3.z
+                )
+                
+                VStack(alignment: .leading) {
+                    Text(
+                        "Time: \(currentCameraInfo.timestamp, format: .number.precision(.fractionLength(3)))"
+                    )
+                    Text("x: \(position.x)")
+                    Text("y: \(position.y)")
+                    Text("z: \(position.z)")
+                    
+                    NavigationLink {
+                        RealityKitTraverseARCameraInfoView(
+                            cameraInfo: cameraInfo,
+                            recordedMeshes: recordedMeshes
+                        )
+                    } label: {
+                        Text("View Path Taken In 3D")
+                    }
+                    .buttonStyle(.glassProminent)
+                    
+                    Button {
+                        showSaveRecording = true
+                    } label: {
+                        Text("Save Recording")
+                    }
+                    .buttonStyle(.glassProminent)
+                }
+                .monospacedDigit()
+            }
+        }
+        .sheet(isPresented: $showSaveRecording) {
+            SaveRecordingView { name in
+                onSave(name)
+                showSaveRecording = false
+            }
+        }
+    }
+}
+
+
 
 #Preview {
     
@@ -234,7 +314,8 @@ struct ARStatsView: View {
             cameraInfo: [],
             recordedMeshes: [:],
             onRestartBaseLocation: {},
-            onToggleRecording: {}
+            onToggleRecording: {},
+            onSave: { _ in }
         )
     }
 }

@@ -37,7 +37,11 @@ struct ContentView: View {
             
             Tab {
                 NavigationStack {
-                    ARRootView()
+                    ARRootView(
+                        onRunSharp: { image, disparityFactor in
+                            try await sharpRunner.runSharp(on: image, disparityFactor: disparityFactor)
+                        }
+                    )
                 }
             } label: {
                 Label("AR", systemImage: "arkit")

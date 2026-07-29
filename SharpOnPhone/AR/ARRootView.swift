@@ -16,6 +16,7 @@ enum ARChoice: String, CaseIterable {
 }
 
 struct ARRootView: View {
+    public var onRunSharp: (UIImage, Double) async throws -> SharpSplatBufferResource
     @State private var manager = ARSessionManager()
     @State var cameraInfoStore = CameraInfoStore()
     @State private var selectedARChoice: ARChoice = .savedProjects
@@ -28,6 +29,7 @@ struct ARRootView: View {
             switch selectedARChoice {
             case .savedProjects:
                 SavedProjectsView(
+                    onRunSharp: onRunSharp,
                     error: $error,
                     showError: $showError
                 )
