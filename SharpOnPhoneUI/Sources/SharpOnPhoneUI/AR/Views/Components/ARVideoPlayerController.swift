@@ -9,6 +9,7 @@
 import AVFoundation
 import Observation
 import SharpOnPhoneModels
+import UIKit
 
 @Observable
 @MainActor
@@ -19,6 +20,9 @@ public final class ARVideoPlayerController {
     public private(set) var currentTime: TimeInterval = 0
     public private(set) var duration: TimeInterval = 0
     public private(set) var isPlaying = false
+    public private(set) var isFrozen = false
+    public private(set) var isCapturingFrame = false
+    public private(set) var currentFrame: UIImage?
     public private(set) var currentCameraInfo: ARCameraInfo?
     
     private let cameraInfo: [ARCameraInfo]
@@ -52,6 +56,11 @@ public final class ARVideoPlayerController {
                 return
             }
             
+            if isFrozen, player.rate != 0 {
+                player.pause()
+                isPlaying = false
+            }
+            
             guard time.seconds.isFinite else {
                 return
             }
@@ -75,20 +84,112 @@ public final class ARVideoPlayerController {
     }
     
     public func play() {
+        guard !isFrozen else {
+            return
+        }
+        
+        currentFrame = nil
         player.play()
         isPlaying = true
     }
     
     public func pause() {
+        guard !isFrozen else {
+            return
+        }
+        
         player.pause()
         isPlaying = false
     }
     
     public func togglePlayback() {
+        guard !isFrozen else {
+            return
+        }
+        
         if isPlaying {
             pause()
         } else {
             play()
+        }
+    }
+    
+    /// Pauses on the current frame and prevents playback controls from changing
+    /// the play/pause state until `unfreeze()` is called.
+    public func freeze() {
+        player.pause()
+        isPlaying = false
+        isFrozen = true
+        updatePlaybackState(to: player.currentTime().seconds)
+    }
+    
+    /// Freezes playback and waits until the currently displayed frame is available.
+    @discardableResult
+    public func freezeAndCaptureCurrentFrame() async -> UIImage? {
+        freeze()
+        return await captureCurrentFrame()
+    }
+    
+    /// Unlocks playback controls. Playback remains paused until `play()` is called.
+    public func unfreeze() {
+        isFrozen = false
+    }
+    
+    /// Pauses playback and advances by one video frame.
+    public func stepForward() {
+        step(by: 1)
+    }
+    
+    /// Pauses playback and moves backward by one video frame.
+    public func stepBackwards() {
+        step(by: -1)
+    }
+    
+    private func step(by frameCount: Int) {
+        guard let item = player.currentItem else {
+            return
+        }
+        
+        player.pause()
+        isPlaying = false
+        currentFrame = nil
+        item.step(byCount: frameCount)
+        
+        let steppedTime = item.currentTime().seconds
+        updatePlaybackState(to: steppedTime)
+    }
+    
+    /// Captures the video frame at `currentTime` and stores it in `currentFrame`.
+    @discardableResult
+    public func captureCurrentFrame() async -> UIImage? {
+        guard let asset = player.currentItem?.asset else {
+            currentFrame = nil
+            return nil
+        }
+        
+        isCapturingFrame = true
+        defer {
+            isCapturingFrame = false
+        }
+        
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        
+        let time = CMTime(
+            seconds: currentTime,
+            preferredTimescale: 600
+        )
+        
+        do {
+            let result = try await generator.image(at: time)
+            let image = UIImage(cgImage: result.image)
+            currentFrame = image
+            return image
+        } catch {
+            currentFrame = nil
+            return nil
         }
     }
     
@@ -106,7 +207,8 @@ public final class ARVideoPlayerController {
         pause shouldPause: Bool
     ) {
         if shouldPause {
-            pause()
+            player.pause()
+            isPlaying = false
         }
         
         let requestedTime = max(seconds, 0)
@@ -131,10 +233,17 @@ public final class ARVideoPlayerController {
             toleranceAfter: .zero
         )
         
-        currentTime = clampedTime
-        currentCameraInfo = closestCameraInfo(
-            to: clampedTime
-        )
+        currentFrame = nil
+        updatePlaybackState(to: clampedTime)
+    }
+    
+    private func updatePlaybackState(to time: TimeInterval) {
+        guard time.isFinite else {
+            return
+        }
+        
+        currentTime = time
+        currentCameraInfo = closestCameraInfo(to: time)
     }
     
     private func updateDuration() {

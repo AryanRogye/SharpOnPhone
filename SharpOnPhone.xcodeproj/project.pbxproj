@@ -116,7 +116,6 @@
 			mainGroup = 9B7F07C3301694DB004DA2CC;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				9B7F07DF301695EB004DA2CC /* XCRemoteSwiftPackageReference "coreai-models" */,
 				9B7F07E030169851004DA2CC /* XCLocalSwiftPackageReference "SharpOnPhoneUI" */,
 				9B7F08ED3016C81E004DA2CC /* XCLocalSwiftPackageReference "../SnapCore" */,
 			);
@@ -367,17 +366,6 @@
 			relativePath = ../SnapCore;
 		};
 /* End XCLocalSwiftPackageReference section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		9B7F07DF301695EB004DA2CC /* XCRemoteSwiftPackageReference "coreai-models" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/coreai-models";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		9B7F07E130169851004DA2CC /* SharpOnPhoneUI */ = {

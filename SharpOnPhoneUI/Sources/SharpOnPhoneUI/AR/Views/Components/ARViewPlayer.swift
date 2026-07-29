@@ -18,6 +18,7 @@ public struct ARVideoPlayer: View {
     
     public var body: some View {
         VideoPlayer(player: controller.player)
+            .allowsHitTesting(!controller.isFrozen)
             .onAppear {
                 controller.startObserving()
                 controller.play()

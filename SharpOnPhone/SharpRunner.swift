@@ -115,10 +115,18 @@ final class SharpRunner {
         state = "Ready"
     }
     
-    public func runSharp(on image: UIImage, disparityFactor: Double) async throws -> SharpSplatBufferResource {
+    public func runSharp(
+        on image: UIImage,
+        disparityFactor: Double
+    ) async throws -> SharpSplatBufferResource {
+        if model == nil || mainFunction == nil {
+            try await load()
+        }
+        
         guard model != nil else {
             throw SharpRunnerError.modelNotLoaded
         }
+        
         guard let mainFunction else {
             throw SharpRunnerError.mainFunctionNotLoaded
         }
